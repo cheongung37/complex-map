@@ -15,7 +15,7 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000; /* 지도보다 위에 배치 */
+            z-index: 1000;
             display: flex;
             gap: 10px;
         }
@@ -24,7 +24,7 @@
             font-size: 16px;
             font-weight: bold;
             color: white;
-            background-color: #444; /* 기본 버튼 색상 (진회색) */
+            background-color: #444;
             border: 2px solid white;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
@@ -44,45 +44,41 @@
     <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
     
     <script>
-        var map = L.map('map').setView([34.841244, 127.678897], 15);
+        // 1. 지도 중앙 좌표 새롭게 업데이트
+        var map = L.map('map').setView([34.841103, 127.682041], 15);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // 담당자님 도면 덮어쓰기
-        var imageUrl = 'YS_YS1-northside.png?v=2';
-        var imageBounds = [[34.830367, 127.656081], [34.852122, 127.701714]];
+        // 2. 담당자님 도면 덮어쓰기 (새로운 모서리 좌표 적용, 캐시 방지 v=3)
+        var imageUrl = 'YS_YS1-northside.png?v=3';
+        var imageBounds = [[34.829992, 127.662519], [34.852214, 127.701564]];
         L.imageOverlay(imageUrl, imageBounds).addTo(map);
 
-        // KMZ 경로 그리기 기능
+        // 3. 경로 그리기 기능
         var currentKmz = null;
 
         function loadRoute(fileName, btnElement) {
-            // 1. 모든 버튼을 기본 색상(진회색)으로 초기화
             var buttons = document.getElementsByClassName('route-btn');
             for(var i=0; i<buttons.length; i++) {
                 buttons[i].style.backgroundColor = '#444';
             }
-            // 2. 지금 누른 버튼만 강조 색상(빨간색)으로 변경
             btnElement.style.backgroundColor = '#e74c3c';
 
-            // 3. 기존에 그려진 선이 있다면 지우기
             if (currentKmz !== null) {
                 map.removeLayer(currentKmz);
             }
 
-            // 4. 새로운 KMZ 파일 불러와서 그리기
             currentKmz = L.kmzLayer().addTo(map);
             currentKmz.on('load', function(e) {
-                // 선이 다 그려지면 화면을 해당 선에 딱 맞게 이동
                 map.fitBounds(e.layer.getBounds());
             });
             currentKmz.load(fileName);
         }
 
-        // 실시간 GPS 추적 기능
+        // 4. 실시간 GPS 추적 기능
         var gpsMarker = null;
         var gpsCircle = null;
 
@@ -104,7 +100,7 @@
             alert("위치 정보를 가져올 수 없습니다. 스마트폰의 '위치 권한'을 허용해 주세요.");
         });
 
-        // 웹페이지가 처음 열릴 때 'BPA 사무실'을 기본으로 띄우기
+        // 웹페이지가 처음 열릴 때 BPA 사무실(kml) 띄우기
         window.onload = function() {
             loadRoute('bpa.kml', document.getElementById('btn-bpa'));
         };
