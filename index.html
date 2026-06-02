@@ -10,10 +10,9 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* 1. 전체 레이아웃 설정 */
         body, html { padding: 0; margin: 0; height: 100%; font-family: 'Noto Sans KR', sans-serif; background-color: #f4f7f9; overflow: hidden; }
         
-        /* 2. 상단 앱 헤더 (LG화학 스타일) */
+        /* 상단 앱 헤더 */
         #top-header {
             background-color: #fff;
             padding: 15px 20px;
@@ -26,7 +25,7 @@
         #top-header i { color: #e11d48; font-size: 20px; margin-right: 10px; }
         #top-header h1 { margin: 0; font-size: 18px; color: #333; font-weight: 700; }
 
-        /* 3. 안전 수칙 박스 (캡처하신 노란 박스 스타일) */
+        /* 안전 수칙 박스 */
         #safety-notice {
             background-color: #fffbeb;
             border-left: 5px solid #f59e0b;
@@ -39,10 +38,10 @@
             z-index: 1900;
         }
 
-        /* 4. 지도 영역 */
+        /* 지도 영역 */
         #map { height: calc(100% - 150px); width: 100%; position: relative; z-index: 1; background: #eee; }
 
-        /* 5. 하단 버튼 메뉴 (플로팅 스타일) */
+        /* 하단 버튼 메뉴 */
         #bottom-nav {
             position: absolute;
             bottom: 25px;
@@ -59,7 +58,6 @@
             z-index: 3000;
         }
 
-        /* 버튼 기본 스타일 */
         .btn {
             flex: 1;
             padding: 14px 0;
@@ -75,17 +73,14 @@
             gap: 5px;
         }
 
-        /* 내 위치 버튼 (회색) */
+        /* 내 위치 버튼 */
         .btn-loc { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; min-width: 90px; }
         .btn-loc:active { background-color: #e2e8f0; }
 
-        /* 목적지 버튼 (선택 전) */
+        /* 목적지 버튼 */
         .btn-dest { background-color: #fff; color: #64748b; border: 1px solid #e2e8f0; }
-        
-        /* 목적지 버튼 (선택 후) */
         .btn-dest.active { background-color: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
 
-        /* 지도 줌 버튼 위치 조정 */
         .leaflet-top.leaflet-right { top: 120px !important; }
     </style>
 </head>
@@ -116,20 +111,15 @@
     <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
     
     <script>
-        // 1. 지도 초기화
+        // 1. 지도 초기화 (공장 단지 부근 중심 세팅)
         var map = L.map('map', { zoomControl: false }).setView([34.839686, 127.679494], 16);
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // 기본 배경 지도 (구글 위성+도로명 하이브리드)
+        // 2. 기본 배경 지도 (구글 순정 위성+도로명 하이브리드 지도 적용)
         L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
             maxZoom: 20,
             attribution: '© Google Maps'
         }).addTo(map);
-
-        // 2. 담당자님 도면 덮어쓰기
-        var imageUrl = 'YS_YS1-northside.png?v=7';
-        var imageBounds = [[34.837020, 127.674415], [34.842352, 127.684574]];
-        L.imageOverlay(imageUrl, imageBounds, { zIndex: 10 }).addTo(map);
 
         // 3. 경로 관리 변수
         var currentKmzLayer = null;
@@ -138,17 +128,15 @@
 
         // 경로 불러오기 함수
         function loadRoute(fileName, btnElement) {
-            // 버튼 디자인 변경
             var buttons = document.querySelectorAll('.btn-dest');
             buttons.forEach(function(b) { b.classList.remove('active'); });
             btnElement.classList.add('active');
 
-            // 기존 경로 제거
             if (currentKmzLayer) { map.removeLayer(currentKmzLayer); }
 
-            // 새 경로 로드
             currentKmzLayer = L.kmzLayer().addTo(map);
             currentKmzLayer.on('load', function(e) {
+                // 선이 로드되면 화면을 선 주위로 맞추되 아래 버튼 영역을 감안해 여백 설정
                 map.fitBounds(e.layer.getBounds(), { padding: [50, 50] });
             });
             currentKmzLayer.load(fileName);
@@ -183,7 +171,7 @@
         window.onload = function() {
             setTimeout(function() {
                 loadRoute('bpa.kml', document.getElementById('btn-bpa'));
-            }, 500); // 라이브러리 로딩 대기 시간
+            }, 500);
         };
     </script>
 </body>
