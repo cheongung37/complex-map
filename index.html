@@ -120,8 +120,11 @@
         var map = L.map('map', { zoomControl: false }).setView([34.839686, 127.679494], 16);
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // 기본 배경 지도
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        // 기본 배경 지도 (구글 위성+도로명 하이브리드)
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: '© Google Maps'
+        }).addTo(map);
 
         // 2. 담당자님 도면 덮어쓰기
         var imageUrl = 'YS_YS1-northside.png?v=7';
