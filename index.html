@@ -3,56 +3,185 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>공장 진입 경로 안내</title>
+    <title>사내 길 안내 시스템</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <style>
-        body, html { 
-            padding: 0; margin: 0; height: 100%; 
-            font-family: 'Noto Sans KR', sans-serif; 
-            background-color: #f8f9fa;
-        }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
+        /* 1. 전체 레이아웃 설정 */
+        body, html { padding: 0; margin: 0; height: 100%; font-family: 'Noto Sans KR', sans-serif; background-color: #f4f7f9; overflow: hidden; }
         
-        /* 상단 앱 헤더 디자인 */
-        #header {
-            position: absolute;
-            top: 0; left: 0; width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 0;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
+        /* 2. 상단 앱 헤더 (LG화학 스타일) */
+        #top-header {
+            background-color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 2000;
         }
-        #header h1 {
-            margin: 0; font-size: 18px; color: #222; font-weight: 700;
+        #top-header i { color: #e11d48; font-size: 20px; margin-right: 10px; }
+        #top-header h1 { margin: 0; font-size: 18px; color: #333; font-weight: 700; }
+
+        /* 3. 안전 수칙 박스 (캡처하신 노란 박스 스타일) */
+        #safety-notice {
+            background-color: #fffbeb;
+            border-left: 5px solid #f59e0b;
+            padding: 12px 15px;
+            margin: 0;
+            font-size: 13px;
+            color: #92400e;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1900;
         }
-        
-        /* 하단 둥근 메뉴바 디자인 */
-        #bottom-menu {
+
+        /* 4. 지도 영역 */
+        #map { height: calc(100% - 150px); width: 100%; position: relative; z-index: 1; background: #eee; }
+
+        /* 5. 하단 버튼 메뉴 (플로팅 스타일) */
+        #bottom-nav {
             position: absolute;
-            bottom: 30px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            width: 92%;
+            max-width: 500px;
             background: white;
-            padding: 8px;
-            border-radius: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            padding: 10px;
+            border-radius: 40px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             display: flex;
             gap: 8px;
-            width: 95%;
-            max-width: 450px;
+            z-index: 3000;
         }
-        
-        /* 목적지 선택 버튼 디자인 */
-        .route-btn {
+
+        /* 버튼 기본 스타일 */
+        .btn {
             flex: 1;
             padding: 14px 0;
-            font-size: 15px;
+            border: none;
+            border-radius: 30px;
+            font-size: 14px;
             font-weight: 700;
-            color: #666;
-            background-color: transparent;
-            border
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        /* 내 위치 버튼 (회색) */
+        .btn-loc { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; min-width: 90px; }
+        .btn-loc:active { background-color: #e2e8f0; }
+
+        /* 목적지 버튼 (선택 전) */
+        .btn-dest { background-color: #fff; color: #64748b; border: 1px solid #e2e8f0; }
+        
+        /* 목적지 버튼 (선택 후) */
+        .btn-dest.active { background-color: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+
+        /* 지도 줌 버튼 위치 조정 */
+        .leaflet-top.leaflet-right { top: 120px !important; }
+    </style>
+</head>
+<body>
+
+    <div id="top-header">
+        <i class="fa-solid fa-truck-fast"></i>
+        <h1>공장 사내 길 안내 시스템</h1>
+    </div>
+
+    <div id="safety-notice">
+        <strong>⚠️ 단지 내 운행 안전 수칙</strong><br>
+        • 전 구간 <strong>시속 20km 이하</strong> 서행 준수<br>
+        • 파란 점(내 위치)이 경로를 벗어나지 않게 주의하세요.
+    </div>
+
+    <div id="map"></div>
+
+    <div id="bottom-nav">
+        <button onclick="goToMyLocation()" class="btn btn-loc">
+            <i class="fa-solid fa-location-crosshairs"></i> 내 위치
+        </button>
+        <button id="btn-bpa" onclick="loadRoute('bpa.kml', this)" class="btn btn-dest">BPA 사무실</button>
+        <button id="btn-pc" onclick="loadRoute('pc.kmz', this)" class="btn btn-dest">PC 사무실</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
+    
+    <script>
+        // 1. 지도 초기화
+        var map = L.map('map', { zoomControl: false }).setView([34.839686, 127.679494], 16);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // 기본 배경 지도
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+        // 2. 담당자님 도면 덮어쓰기
+        var imageUrl = 'YS_YS1-northside.png?v=7';
+        var imageBounds = [[34.837020, 127.674415], [34.842352, 127.684574]];
+        L.imageOverlay(imageUrl, imageBounds, { zIndex: 10 }).addTo(map);
+
+        // 3. 경로 관리 변수
+        var currentKmzLayer = null;
+        var userLatLng = null;
+        var gpsMarker = null;
+
+        // 경로 불러오기 함수
+        function loadRoute(fileName, btnElement) {
+            // 버튼 디자인 변경
+            var buttons = document.querySelectorAll('.btn-dest');
+            buttons.forEach(function(b) { b.classList.remove('active'); });
+            btnElement.classList.add('active');
+
+            // 기존 경로 제거
+            if (currentKmzLayer) { map.removeLayer(currentKmzLayer); }
+
+            // 새 경로 로드
+            currentKmzLayer = L.kmzLayer().addTo(map);
+            currentKmzLayer.on('load', function(e) {
+                map.fitBounds(e.layer.getBounds(), { padding: [50, 50] });
+            });
+            currentKmzLayer.load(fileName);
+        }
+
+        // 4. 내 위치 찾기 함수
+        function goToMyLocation() {
+            if (userLatLng) {
+                map.setView(userLatLng, 17);
+            } else {
+                alert("위치 정보를 수신 중입니다. 잠시만 기다려 주세요.");
+            }
+        }
+
+        // 5. 실시간 GPS 추적 설정
+        map.locate({ setView: false, watch: true, enableHighAccuracy: true });
+
+        map.on('locationfound', function(e) {
+            userLatLng = e.latlng;
+            if (!gpsMarker) {
+                gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치");
+            } else {
+                gpsMarker.setLatLng(e.latlng);
+            }
+        });
+
+        map.on('locationerror', function() {
+            console.log("GPS 권한 대기 중...");
+        });
+
+        // 처음 실행 시 BPA 경로 기본 로드
+        window.onload = function() {
+            setTimeout(function() {
+                loadRoute('bpa.kml', document.getElementById('btn-bpa'));
+            }, 500); // 라이브러리 로딩 대기 시간
+        };
+    </script>
+</body>
+</html>
