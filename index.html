@@ -34,7 +34,7 @@
 </head>
 <body>
     <div id="ui-container">
-        <button id="btn-bpa" class="route-btn" onclick="loadRoute('bpa.kmz', this)">BPA 사무실 가기</button>
+        <button id="btn-bpa" class="route-btn" onclick="loadRoute('bpa.kml', this)">BPA 사무실 가기</button>
         <button id="btn-pc" class="route-btn" onclick="loadRoute('pc.kmz', this)">PC 사무실 가기</button>
     </div>
 
@@ -106,7 +106,7 @@
 
         // 웹페이지가 처음 열릴 때 'BPA 사무실'을 기본으로 띄우기
         window.onload = function() {
-            loadRoute('bpa.kmz', document.getElementById('btn-bpa'));
+            loadRoute('bpa.kml', document.getElementById('btn-bpa'));
         };
     </script>
 </body>
