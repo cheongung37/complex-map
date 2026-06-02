@@ -14,19 +14,19 @@
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. 지도 초기화 (중심점: 담당자님 공장 부근)
-        var map = L.map('map').setView([34.8395, 127.6781], 16);
+        // 1. 지도 초기화 (중심점: 계산된 도면의 중앙)
+        var map = L.map('map').setView([34.841244, 127.678897], 15);
 
-        // 2. 기본 배경 지도 깔기 (오픈스트리트맵 - 도면 밖으로 나갔을 때를 대비)
+        // 2. 기본 배경 지도 깔기 (오픈스트리트맵)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // 3. 담당자님의 고화질 도면 덮어쓰기! (찾아주신 좌표 적용)
-        var imageUrl = 'YS_YS1-northside.png';
+        // 3. 담당자님의 새로운 도면 덮어쓰기! (?v=2 를 붙여서 스마트폰 캐시 문제 방지)
+        var imageUrl = 'YS_YS1-northside.png?v=2';
         // [남서쪽 모서리 좌표], [북동쪽 모서리 좌표]
-        var imageBounds = [[34.838811, 127.671492], [34.840183, 127.684725]];
+        var imageBounds = [[34.830367, 127.656081], [34.852122, 127.701714]];
         L.imageOverlay(imageUrl, imageBounds).addTo(map);
 
         // 4. 기사님 실시간 위치(GPS) 추적 기능
@@ -43,7 +43,7 @@
                 // 처음 위치를 찾으면 파란색 마커 생성하고 화면 이동
                 gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치").openPopup();
                 gpsCircle = L.circle(e.latlng, radius).addTo(map);
-                map.setView(e.latlng, 17);
+                map.setView(e.latlng, 16);
             } else {
                 // 위치가 바뀌면 마커도 따라 이동
                 gpsMarker.setLatLng(e.latlng);
