@@ -44,17 +44,18 @@
     <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
     
     <script>
-        // 1. 지도 중앙 좌표 새롭게 업데이트
-        var map = L.map('map').setView([34.841103, 127.682041], 15);
+        // 1. 지도 중앙 좌표 새롭게 업데이트 (알려주신 구글 맵 좌표의 정중앙)
+        var map = L.map('map').setView([34.837545, 127.675580], 15);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // 2. 담당자님 도면 덮어쓰기 (새로운 모서리 좌표 적용, 캐시 방지 v=3)
-        var imageUrl = 'YS_YS1-northside.png?v=3';
-        var imageBounds = [[34.829992, 127.662519], [34.852214, 127.701564]];
+        // 2. 담당자님 도면 덮어쓰기 (구글 맵 좌표 적용, 캐시 방지 v=4)
+        var imageUrl = 'YS_YS1-northside.png?v=4';
+        // [[남쪽 위도, 서쪽 경도], [북쪽 위도, 동쪽 경도]]
+        var imageBounds = [[34.830994, 127.663285], [34.844097, 127.687876]];
         L.imageOverlay(imageUrl, imageBounds).addTo(map);
 
         // 3. 경로 그리기 기능
