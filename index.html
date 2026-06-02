@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>화물차 진입로 안내</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { padding: 0; margin: 0; height: 100%; }
+        #map { height: 100vh; width: 100vw; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. 지도 초기화 (중심점: 담당자님 공장 부근)
+        var map = L.map('map').setView([34.8395, 127.6781], 16);
+
+        // 2. 기본 배경 지도 깔기 (오픈스트리트맵 - 도면 밖으로 나갔을 때를 대비)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // 3. 담당자님의 고화질 도면 덮어쓰기! (찾아주신 좌표 적용)
+        var imageUrl = 'YS_YS1-northside.png';
+        // [남서쪽 모서리 좌표], [북동쪽 모서리 좌표]
+        var imageBounds = [[34.838811, 127.671492], [34.840183, 127.684725]];
+        L.imageOverlay(imageUrl, imageBounds).addTo(map);
+
+        // 4. 기사님 실시간 위치(GPS) 추적 기능
+        var gpsMarker = null;
+        var gpsCircle = null;
+
+        // 위치 추적 시작
+        map.locate({setView: false, watch: true, enableHighAccuracy: true});
+
+        // 위치를 찾았을 때 파란 점 찍기
+        map.on('locationfound', function(e) {
+            var radius = e.accuracy / 2;
+            if (!gpsMarker) {
+                // 처음 위치를 찾으면 파란색 마커 생성하고 화면 이동
+                gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치").openPopup();
+                gpsCircle = L.circle(e.latlng, radius).addTo(map);
+                map.setView(e.latlng, 17);
+            } else {
+                // 위치가 바뀌면 마커도 따라 이동
+                gpsMarker.setLatLng(e.latlng);
+                gpsCircle.setLatLng(e.latlng);
+                gpsCircle.setRadius(radius);
+            }
+        });
+
+        // 위치 정보 권한 거부 시 안내 메시지
+        map.on('locationerror', function(e) {
+            alert("위치 정보를 가져올 수 없습니다. 스마트폰의 '위치 권한'을 허용해 주세요.");
+        });
+    </script>
+</body>
+</html>
