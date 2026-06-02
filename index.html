@@ -3,59 +3,111 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>화물차 진입로 안내</title>
+    <title>공장 진입로 안내</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { padding: 0; margin: 0; height: 100%; }
         #map { height: 100vh; width: 100vw; }
+        
+        /* 화면 위에 떠 있는 버튼 디자인 */
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000; /* 지도보다 위에 배치 */
+            display: flex;
+            gap: 10px;
+        }
+        .route-btn {
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #444; /* 기본 버튼 색상 (진회색) */
+            border: 2px solid white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <div id="ui-container">
+        <button id="btn-bpa" class="route-btn" onclick="loadRoute('bpa.kmz', this)">BPA 사무실 가기</button>
+        <button id="btn-pc" class="route-btn" onclick="loadRoute('pc.kmz', this)">PC 사무실 가기</button>
+    </div>
+
     <div id="map"></div>
+    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
+    
     <script>
-        // 1. 지도 초기화 (중심점: 계산된 도면의 중앙)
         var map = L.map('map').setView([34.841244, 127.678897], 15);
 
-        // 2. 기본 배경 지도 깔기 (오픈스트리트맵)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // 3. 담당자님의 새로운 도면 덮어쓰기! (?v=2 를 붙여서 스마트폰 캐시 문제 방지)
+        // 담당자님 도면 덮어쓰기
         var imageUrl = 'YS_YS1-northside.png?v=2';
-        // [남서쪽 모서리 좌표], [북동쪽 모서리 좌표]
         var imageBounds = [[34.830367, 127.656081], [34.852122, 127.701714]];
         L.imageOverlay(imageUrl, imageBounds).addTo(map);
 
-        // 4. 기사님 실시간 위치(GPS) 추적 기능
+        // KMZ 경로 그리기 기능
+        var currentKmz = null;
+
+        function loadRoute(fileName, btnElement) {
+            // 1. 모든 버튼을 기본 색상(진회색)으로 초기화
+            var buttons = document.getElementsByClassName('route-btn');
+            for(var i=0; i<buttons.length; i++) {
+                buttons[i].style.backgroundColor = '#444';
+            }
+            // 2. 지금 누른 버튼만 강조 색상(빨간색)으로 변경
+            btnElement.style.backgroundColor = '#e74c3c';
+
+            // 3. 기존에 그려진 선이 있다면 지우기
+            if (currentKmz !== null) {
+                map.removeLayer(currentKmz);
+            }
+
+            // 4. 새로운 KMZ 파일 불러와서 그리기
+            currentKmz = L.kmzLayer().addTo(map);
+            currentKmz.on('load', function(e) {
+                // 선이 다 그려지면 화면을 해당 선에 딱 맞게 이동
+                map.fitBounds(e.layer.getBounds());
+            });
+            currentKmz.load(fileName);
+        }
+
+        // 실시간 GPS 추적 기능
         var gpsMarker = null;
         var gpsCircle = null;
 
-        // 위치 추적 시작
         map.locate({setView: false, watch: true, enableHighAccuracy: true});
 
-        // 위치를 찾았을 때 파란 점 찍기
         map.on('locationfound', function(e) {
             var radius = e.accuracy / 2;
             if (!gpsMarker) {
-                // 처음 위치를 찾으면 파란색 마커 생성하고 화면 이동
                 gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치").openPopup();
                 gpsCircle = L.circle(e.latlng, radius).addTo(map);
-                map.setView(e.latlng, 16);
             } else {
-                // 위치가 바뀌면 마커도 따라 이동
                 gpsMarker.setLatLng(e.latlng);
                 gpsCircle.setLatLng(e.latlng);
                 gpsCircle.setRadius(radius);
             }
         });
 
-        // 위치 정보 권한 거부 시 안내 메시지
         map.on('locationerror', function(e) {
             alert("위치 정보를 가져올 수 없습니다. 스마트폰의 '위치 권한'을 허용해 주세요.");
         });
+
+        // 웹페이지가 처음 열릴 때 'BPA 사무실'을 기본으로 띄우기
+        window.onload = function() {
+            loadRoute('bpa.kmz', document.getElementById('btn-bpa'));
+        };
     </script>
 </body>
 </html>
