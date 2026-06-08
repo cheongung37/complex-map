@@ -82,6 +82,23 @@
         .btn-dest.active { background-color: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
 
         .leaflet-top.leaflet-right { top: 120px !important; }
+
+        /* 🔥 새롭게 추가된 부분: 마커 텍스트 항상 보이기 전용 스타일 */
+        .always-on-label {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #2563eb;
+            border-radius: 5px;
+            font-weight: 700;
+            color: #1e3a8a;
+            font-size: 13px;
+            padding: 4px 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+        /* 툴팁 기본 꼬리표(삼각형) 제거하여 깔끔하게 디자인 */
+        .leaflet-tooltip.always-on-label::before {
+            display: none; 
+        }
     </style>
 </head>
 <body>
@@ -136,43 +153,9 @@
 
             currentKmzLayer = L.kmzLayer().addTo(map);
             currentKmzLayer.on('load', function(e) {
-                // 선이 로드되면 화면을 선 주위로 맞추되 아래 버튼 영역을 감안해 여백 설정
+                // 선이 로드되면 화면을 선 주위로 맞춤
                 map.fitBounds(e.layer.getBounds(), { padding: [50, 50] });
-            });
-            currentKmzLayer.load(fileName);
-        }
 
-        // 4. 내 위치 찾기 함수
-        function goToMyLocation() {
-            if (userLatLng) {
-                map.setView(userLatLng, 17);
-            } else {
-                alert("위치 정보를 수신 중입니다. 잠시만 기다려 주세요.");
-            }
-        }
-
-        // 5. 실시간 GPS 추적 설정
-        map.locate({ setView: false, watch: true, enableHighAccuracy: true });
-
-        map.on('locationfound', function(e) {
-            userLatLng = e.latlng;
-            if (!gpsMarker) {
-                gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치");
-            } else {
-                gpsMarker.setLatLng(e.latlng);
-            }
-        });
-
-        map.on('locationerror', function() {
-            console.log("GPS 권한 대기 중...");
-        });
-
-        // 처음 실행 시 BPA 경로 기본 로드
-        window.onload = function() {
-            setTimeout(function() {
-                loadRoute('bpa.kml', document.getElementById('btn-bpa'));
-            }, 500);
-        };
-    </script>
-</body>
-</html>
+                // 🔥 새롭게 추가된 부분: KML/KMZ 내부의 마커 이름표 항상 띄우기
+                e.layer.eachLayer(function(layer) {
+                    // 해당 레이어가 '마커(Point)'이고 구글 맵에서 지정한 '이름(name
