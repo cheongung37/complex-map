@@ -41,29 +41,30 @@
         /* 지도 영역 */
         #map { height: calc(100% - 150px); width: 100%; position: relative; z-index: 1; background: #eee; }
 
-        /* 하단 버튼 메뉴 */
+        /* 하단 버튼 메뉴판 CONTAINER */
         #bottom-nav {
             position: absolute;
-            bottom: 25px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 92%;
             max-width: 500px;
             background: white;
-            padding: 10px;
-            border-radius: 40px;
+            padding: 12px;
+            border-radius: 24px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 10px;
             z-index: 3000;
         }
 
+        /* 버튼 공통 스타일 */
         .btn {
-            flex: 1;
-            padding: 14px 0;
+            padding: 12px 0;
             border: none;
-            border-radius: 30px;
-            font-size: 14px;
+            border-radius: 20px;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
             transition: 0.2s;
@@ -73,15 +74,28 @@
             gap: 5px;
         }
 
-        /* 내 위치 버튼 */
-        .btn-loc { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; min-width: 90px; }
+        /* 내 위치 버튼 (상단 가로 꽉 차게 배치) */
+        .btn-loc { 
+            background-color: #f1f5f9; 
+            color: #475569; 
+            border: 1px solid #e2e8f0; 
+            width: 100%;
+        }
         .btn-loc:active { background-color: #e2e8f0; }
 
-        /* 목적지 버튼 */
+        /* 목적지 버튼들을 2열 바둑판 구조로 만드는 그리드 */
+        #dest-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        /* 목적지 버튼 스타일 */
         .btn-dest { background-color: #fff; color: #64748b; border: 1px solid #e2e8f0; }
         .btn-dest.active { background-color: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
 
-        .leaflet-top.leaflet-right { top: 120px !important; }
+        /* 지도 줌 버튼 위치 조절 (하단 메뉴가 커진 만큼 더 위로 올림) */
+        .leaflet-top.leaflet-right { top: 140px !important; }
 
         /* 마커 텍스트 항상 보이기 스타일 */
         .always-on-label {
@@ -115,10 +129,15 @@
 
     <div id="bottom-nav">
         <button onclick="goToMyLocation()" class="btn btn-loc">
-            <i class="fa-solid fa-location-crosshairs"></i> 내 위치
+            <i class="fa-solid fa-location-crosshairs"></i> 내 위치 확인하기
         </button>
-        <button id="btn-bpa" onclick="loadRoute('bpa.kml', this)" class="btn btn-dest">BPA 사무실</button>
-        <button id="btn-pc" onclick="loadRoute('pc.kmz', this)" class="btn btn-dest">PC 사무실</button>
+        
+        <div id="dest-grid">
+            <button id="btn-bpa" onclick="loadRoute('bpa.kml', this)" class="btn btn-dest">여수 BPA 사무실</button>
+            <button id="btn-pc" onclick="loadRoute('pc.kmz', this)" class="btn btn-dest">여수 PC 사무실</button>
+            <button id="btn-ds-main" onclick="loadRoute('D_main_gate_to_production_group_office.kmz', this)" class="btn btn-dest">대산 미래기술관(정문)</button>
+            <button id="btn-ds-south" onclick="loadRoute('D_south_gate_to_production_group_office.kmz', this)" class="btn btn-dest">대산 미래기술관(남문)</button>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -149,19 +168,17 @@
 
             currentKmzLayer = L.kmzLayer().addTo(map);
             currentKmzLayer.on('load', function(e) {
-                // [안전장치 1] 유효한 지도 좌표 범위가 있을 때만 화면 맞춤 수행 (크래시 방지)
+                // 선이 로드되면 화면을 해당 선 주위로 맞춤 (하단 메뉴 높이를 감안해 아래쪽 패딩을 150으로 확대)
                 var bounds = e.layer.getBounds();
                 if (bounds && bounds.isValid()) {
-                    map.fitBounds(bounds, { padding: [50, 50] });
+                    map.fitBounds(bounds, { paddingBottomRight: [0, 150], paddingTopLeft: [20, 20] });
                 }
 
-                // [안전장치 2] KML 파일 내에 하위 폴더 구조가 겹쳐있어도 끝까지 추적해 마커를 찾는 안전 함수
+                // KML/KMZ 내부 마커들을 찾아 툴팁(라벨) 강제 표시하는 안전 함수
                 function parseLayersRecursively(layer) {
                     if (typeof layer.eachLayer === 'function') {
-                        // 하위 폴더나 그룹 레이어인 경우 내부를 순회
                         layer.eachLayer(parseLayersRecursively);
                     } else if (layer instanceof L.Marker || (typeof layer.getLatLng === 'function' && !layer.getBounds)) {
-                        // 실제 마커 데이터를 찾은 경우 안전하게 이름표 결합
                         try {
                             var labelText = '';
                             if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
@@ -179,12 +196,10 @@
                                 }).openTooltip();
                             }
                         } catch (err) {
-                            console.error("마커 이름표 바인딩 중 경미한 오류 무시됨:", err);
+                            console.error("마커 이름표 처리 중 오류 무시됨:", err);
                         }
                     }
                 }
-
-                // 마커 검사 및 이름표 생성 프로세스 시작
                 parseLayersRecursively(e.layer);
             });
             
@@ -216,7 +231,7 @@
             console.log("GPS 권한 대기 중...");
         });
 
-        // 초기 구동 시 BPA 경로 자동 설정
+        // 초기 구동 시 '여수 BPA 사무실' 경로 자동 설정
         window.onload = function() {
             setTimeout(function() {
                 var initialBtn = document.getElementById('btn-bpa');
