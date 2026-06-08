@@ -37,4 +37,188 @@
         .control-area {
             display: flex;
             flex-wrap: wrap;
-            gap
+            gap: 4px;
+            justify-content: flex-end;
+            max-width: 65%; /* 타이틀을 침범하지 않도록 제한 */
+        }
+
+        /* 미니 버튼 공통 스타일 (크기 50% 축소) */
+        .btn-mini {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            white-space: nowrap;
+        }
+
+        /* 미니 버튼 - 내 위치 */
+        .btn-loc { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        .btn-loc:active { background-color: #e2e8f0; }
+
+        /* 미니 버튼 - 목적지 */
+        .btn-dest { background-color: #fff; color: #64748b; border: 1px solid #e2e8f0; }
+        .btn-dest.active { background-color: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }
+
+        /* 2. 안전 수칙 박스 */
+        #safety-notice {
+            background-color: #fffbeb;
+            border-left: 5px solid #f59e0b;
+            padding: 10px 15px;
+            margin: 0;
+            font-size: 12px;
+            color: #92400e;
+            line-height: 1.4;
+            position: relative;
+            z-index: 1900;
+        }
+
+        /* 3. 지도 영역 (하단 메뉴가 사라졌으므로 높이를 더 넓게 씀) */
+        #map { height: calc(100% - 100px); width: 100%; position: relative; z-index: 1; background: #eee; }
+
+        /* 지도 확대/축소 버튼 위치 */
+        .leaflet-top.leaflet-right { top: 10px !important; }
+
+        /* 마커 텍스트 항상 보이기 스타일 */
+        .always-on-label {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #2563eb;
+            border-radius: 5px;
+            font-weight: 700;
+            color: #1e3a8a;
+            font-size: 12px;
+            padding: 4px 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+        .leaflet-tooltip.always-on-label::before { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="top-header">
+        <div class="title-area">
+            <i class="fa-solid fa-truck-fast"></i>
+            <h1>사내 길 안내</h1>
+        </div>
+        <div class="control-area">
+            <button onclick="goToMyLocation()" class="btn-mini btn-loc" title="내 위치">
+                <i class="fa-solid fa-location-crosshairs"></i> 내 위치
+            </button>
+            <button id="btn-bpa" onclick="loadRoute('bpa.kml', this)" class="btn-mini btn-dest">여수 BPA</button>
+            <button id="btn-pc" onclick="loadRoute('pc.kmz', this)" class="btn-mini btn-dest">여수 PC</button>
+            <button id="btn-ds-main" onclick="loadRoute('D_main_gate_to_production_group_office.kmz', this)" class="btn-mini btn-dest">대산(정문)</button>
+            <button id="btn-ds-south" onclick="loadRoute('D_south_gate_to_production_group_office.kmz', this)" class="btn-mini btn-dest">대산(남문)</button>
+        </div>
+    </div>
+
+    <div id="safety-notice">
+        <strong>⚠️ 단지 내 운행 안전 수칙</strong><br>
+        • 전 구간 <strong>시속 20km 이하</strong> 서행 준수<br>
+        • 파란 점(내 위치)이 경로를 벗어나지 않게 주의하세요.
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
+    
+    <script>
+        var map = L.map('map', { zoomControl: false }).setView([34.839686, 127.679494], 16);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: '© Google Maps'
+        }).addTo(map);
+
+        var currentKmzLayer = null;
+        var userLatLng = null;
+        var gpsMarker = null;
+
+        function loadRoute(fileName, btnElement) {
+            var buttons = document.querySelectorAll('.btn-dest');
+            buttons.forEach(function(b) { b.classList.remove('active'); });
+            btnElement.classList.add('active');
+
+            if (currentKmzLayer) { map.removeLayer(currentKmzLayer); }
+
+            currentKmzLayer = L.kmzLayer().addTo(map);
+            currentKmzLayer.on('load', function(e) {
+                // 하단 버튼이 없어졌으므로 상하좌우 동일한 균형 여백(padding: 40) 적용
+                var bounds = e.layer.getBounds();
+                if (bounds && bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+
+                function parseLayersRecursively(layer) {
+                    if (typeof layer.eachLayer === 'function') {
+                        layer.eachLayer(parseLayersRecursively);
+                    } else if (layer instanceof L.Marker || (typeof layer.getLatLng === 'function' && !layer.getBounds)) {
+                        try {
+                            var labelText = '';
+                            if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
+                                labelText = layer.feature.properties.name;
+                            } else if (layer.options && layer.options.title) {
+                                labelText = layer.options.title;
+                            }
+
+                            if (labelText) {
+                                layer.bindTooltip(labelText, {
+                                    permanent: true,
+                                    direction: 'bottom',
+                                    className: 'always-on-label',
+                                    offset: [0, 5]
+                                }).openTooltip();
+                            }
+                        } catch (err) {
+                            console.error("마커 이름표 처리 중 오류 무시됨:", err);
+                        }
+                    }
+                }
+                parseLayersRecursively(e.layer);
+            });
+            
+            currentKmzLayer.load(fileName);
+        }
+
+        function goToMyLocation() {
+            if (userLatLng) {
+                map.setView(userLatLng, 17);
+            } else {
+                alert("위치 정보를 수신 중입니다. 잠시만 기다려 주세요.");
+            }
+        }
+
+        map.locate({ setView: false, watch: true, enableHighAccuracy: true });
+
+        map.on('locationfound', function(e) {
+            userLatLng = e.latlng;
+            if (!gpsMarker) {
+                gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치");
+            } else {
+                gpsMarker.setLatLng(e.latlng);
+            }
+        });
+
+        map.on('locationerror', function() {
+            console.log("GPS 권한 대기 중...");
+        });
+
+        window.onload = function() {
+            setTimeout(function() {
+                var initialBtn = document.getElementById('btn-bpa');
+                if (initialBtn) {
+                    loadRoute('bpa.kml', initialBtn);
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
