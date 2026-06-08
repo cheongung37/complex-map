@@ -12,234 +12,29 @@
     <style>
         body, html { padding: 0; margin: 0; height: 100%; font-family: 'Noto Sans KR', sans-serif; background-color: #f4f7f9; overflow: hidden; }
         
-        /* 상단 앱 헤더 */
+        /* 1. 상단 앱 헤더 (좌측 타이틀 + 우측 미니 버튼) */
         #top-header {
             background-color: #fff;
-            padding: 15px 20px;
+            padding: 10px 15px;
             display: flex;
+            justify-content: space-between; /* 양쪽 끝으로 배치 */
             align-items: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             position: relative;
             z-index: 2000;
         }
-        #top-header i { color: #e11d48; font-size: 20px; margin-right: 10px; }
-        #top-header h1 { margin: 0; font-size: 18px; color: #333; font-weight: 700; }
 
-        /* 안전 수칙 박스 */
-        #safety-notice {
-            background-color: #fffbeb;
-            border-left: 5px solid #f59e0b;
-            padding: 12px 15px;
-            margin: 0;
-            font-size: 13px;
-            color: #92400e;
-            line-height: 1.5;
-            position: relative;
-            z-index: 1900;
-        }
-
-        /* 지도 영역 */
-        #map { height: calc(100% - 150px); width: 100%; position: relative; z-index: 1; background: #eee; }
-
-        /* 하단 버튼 메뉴판 CONTAINER */
-        #bottom-nav {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 92%;
-            max-width: 500px;
-            background: white;
-            padding: 12px;
-            border-radius: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 3000;
-        }
-
-        /* 버튼 공통 스타일 */
-        .btn {
-            padding: 12px 0;
-            border: none;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
+        /* 좌측 타이틀 영역 */
+        .title-area {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        /* 내 위치 버튼 (상단 가로 꽉 차게 배치) */
-        .btn-loc { 
-            background-color: #f1f5f9; 
-            color: #475569; 
-            border: 1px solid #e2e8f0; 
-            width: 100%;
-        }
-        .btn-loc:active { background-color: #e2e8f0; }
-
-        /* 목적지 버튼들을 2열 바둑판 구조로 만드는 그리드 */
-        #dest-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        /* 목적지 버튼 스타일 */
-        .btn-dest { background-color: #fff; color: #64748b; border: 1px solid #e2e8f0; }
-        .btn-dest.active { background-color: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
-
-        /* 지도 줌 버튼 위치 조절 (하단 메뉴가 커진 만큼 더 위로 올림) */
-        .leaflet-top.leaflet-right { top: 140px !important; }
-
-        /* 마커 텍스트 항상 보이기 스타일 */
-        .always-on-label {
-            background-color: rgba(255, 255, 255, 0.95);
-            border: 1px solid #2563eb;
-            border-radius: 5px;
-            font-weight: 700;
-            color: #1e3a8a;
-            font-size: 12px;
-            padding: 4px 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             white-space: nowrap;
         }
-        .leaflet-tooltip.always-on-label::before { display: none; }
-    </style>
-</head>
-<body>
+        .title-area i { color: #e11d48; font-size: 16px; margin-right: 6px; }
+        .title-area h1 { margin: 0; font-size: 15px; color: #333; font-weight: 700; }
 
-    <div id="top-header">
-        <i class="fa-solid fa-truck-fast"></i>
-        <h1>공장 사내 길 안내 시스템</h1>
-    </div>
-
-    <div id="safety-notice">
-        <strong>⚠️ 단지 내 운행 안전 수칙</strong><br>
-        • 전 구간 <strong>시속 20km 이하</strong> 서행 준수<br>
-        • 파란 점(내 위치)이 경로를 벗어나지 않게 주의하세요.
-    </div>
-
-    <div id="map"></div>
-
-    <div id="bottom-nav">
-        <button onclick="goToMyLocation()" class="btn btn-loc">
-            <i class="fa-solid fa-location-crosshairs"></i> 내 위치 확인하기
-        </button>
-        
-        <div id="dest-grid">
-            <button id="btn-bpa" onclick="loadRoute('bpa.kml', this)" class="btn btn-dest">여수 BPA 사무실</button>
-            <button id="btn-pc" onclick="loadRoute('pc.kmz', this)" class="btn btn-dest">여수 PC 사무실</button>
-            <button id="btn-ds-main" onclick="loadRoute('D_main_gate_to_production_group_office.kmz', this)" class="btn btn-dest">대산 미래기술관(정문)</button>
-            <button id="btn-ds-south" onclick="loadRoute('D_south_gate_to_production_group_office.kmz', this)" class="btn btn-dest">대산 미래기술관(남문)</button>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
-    
-    <script>
-        // 1. 지도 초기화
-        var map = L.map('map', { zoomControl: false }).setView([34.839686, 127.679494], 16);
-        L.control.zoom({ position: 'topright' }).addTo(map);
-
-        // 2. 구글 배경 지도 깔기
-        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-            maxZoom: 20,
-            attribution: '© Google Maps'
-        }).addTo(map);
-
-        var currentKmzLayer = null;
-        var userLatLng = null;
-        var gpsMarker = null;
-
-        // 3. 경로 불러오기 및 이름표 자동 파싱 함수
-        function loadRoute(fileName, btnElement) {
-            var buttons = document.querySelectorAll('.btn-dest');
-            buttons.forEach(function(b) { b.classList.remove('active'); });
-            btnElement.classList.add('active');
-
-            if (currentKmzLayer) { map.removeLayer(currentKmzLayer); }
-
-            currentKmzLayer = L.kmzLayer().addTo(map);
-            currentKmzLayer.on('load', function(e) {
-                // 선이 로드되면 화면을 해당 선 주위로 맞춤 (하단 메뉴 높이를 감안해 아래쪽 패딩을 150으로 확대)
-                var bounds = e.layer.getBounds();
-                if (bounds && bounds.isValid()) {
-                    map.fitBounds(bounds, { paddingBottomRight: [0, 150], paddingTopLeft: [20, 20] });
-                }
-
-                // KML/KMZ 내부 마커들을 찾아 툴팁(라벨) 강제 표시하는 안전 함수
-                function parseLayersRecursively(layer) {
-                    if (typeof layer.eachLayer === 'function') {
-                        layer.eachLayer(parseLayersRecursively);
-                    } else if (layer instanceof L.Marker || (typeof layer.getLatLng === 'function' && !layer.getBounds)) {
-                        try {
-                            var labelText = '';
-                            if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
-                                labelText = layer.feature.properties.name;
-                            } else if (layer.options && layer.options.title) {
-                                labelText = layer.options.title;
-                            }
-
-                            if (labelText) {
-                                layer.bindTooltip(labelText, {
-                                    permanent: true,
-                                    direction: 'bottom',
-                                    className: 'always-on-label',
-                                    offset: [0, 5]
-                                }).openTooltip();
-                            }
-                        } catch (err) {
-                            console.error("마커 이름표 처리 중 오류 무시됨:", err);
-                        }
-                    }
-                }
-                parseLayersRecursively(e.layer);
-            });
-            
-            currentKmzLayer.load(fileName);
-        }
-
-        // 4. 내 위치 찾기 함수
-        function goToMyLocation() {
-            if (userLatLng) {
-                map.setView(userLatLng, 17);
-            } else {
-                alert("위치 정보를 수신 중입니다. 잠시만 기다려 주세요.");
-            }
-        }
-
-        // 5. 실시간 GPS 추적 설정
-        map.locate({ setView: false, watch: true, enableHighAccuracy: true });
-
-        map.on('locationfound', function(e) {
-            userLatLng = e.latlng;
-            if (!gpsMarker) {
-                gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치");
-            } else {
-                gpsMarker.setLatLng(e.latlng);
-            }
-        });
-
-        map.on('locationerror', function() {
-            console.log("GPS 권한 대기 중...");
-        });
-
-        // 초기 구동 시 '여수 BPA 사무실' 경로 자동 설정
-        window.onload = function() {
-            setTimeout(function() {
-                var initialBtn = document.getElementById('btn-bpa');
-                if (initialBtn) {
-                    loadRoute('bpa.kml', initialBtn);
-                }
-            }, 500);
-        };
-    </script>
-</body>
-</html>
+        /* 우측 미니 버튼 영역 */
+        .control-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap
