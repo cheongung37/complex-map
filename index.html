@@ -83,22 +83,19 @@
 
         .leaflet-top.leaflet-right { top: 120px !important; }
 
-        /* 🔥 새롭게 추가된 부분: 마커 텍스트 항상 보이기 전용 스타일 */
+        /* 마커 텍스트 항상 보이기 스타일 */
         .always-on-label {
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.95);
             border: 1px solid #2563eb;
             border-radius: 5px;
             font-weight: 700;
             color: #1e3a8a;
-            font-size: 13px;
+            font-size: 12px;
             padding: 4px 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             white-space: nowrap;
         }
-        /* 툴팁 기본 꼬리표(삼각형) 제거하여 깔끔하게 디자인 */
-        .leaflet-tooltip.always-on-label::before {
-            display: none; 
-        }
+        .leaflet-tooltip.always-on-label::before { display: none; }
     </style>
 </head>
 <body>
@@ -128,22 +125,21 @@
     <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
     
     <script>
-        // 1. 지도 초기화 (공장 단지 부근 중심 세팅)
+        // 1. 지도 초기화
         var map = L.map('map', { zoomControl: false }).setView([34.839686, 127.679494], 16);
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // 2. 기본 배경 지도 (구글 순정 위성+도로명 하이브리드 지도 적용)
+        // 2. 구글 배경 지도 깔기
         L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
             maxZoom: 20,
             attribution: '© Google Maps'
         }).addTo(map);
 
-        // 3. 경로 관리 변수
         var currentKmzLayer = null;
         var userLatLng = null;
         var gpsMarker = null;
 
-        // 경로 불러오기 함수
+        // 3. 경로 불러오기 및 이름표 자동 파싱 함수
         function loadRoute(fileName, btnElement) {
             var buttons = document.querySelectorAll('.btn-dest');
             buttons.forEach(function(b) { b.classList.remove('active'); });
@@ -153,9 +149,82 @@
 
             currentKmzLayer = L.kmzLayer().addTo(map);
             currentKmzLayer.on('load', function(e) {
-                // 선이 로드되면 화면을 선 주위로 맞춤
-                map.fitBounds(e.layer.getBounds(), { padding: [50, 50] });
+                // [안전장치 1] 유효한 지도 좌표 범위가 있을 때만 화면 맞춤 수행 (크래시 방지)
+                var bounds = e.layer.getBounds();
+                if (bounds && bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
 
-                // 🔥 새롭게 추가된 부분: KML/KMZ 내부의 마커 이름표 항상 띄우기
-                e.layer.eachLayer(function(layer) {
-                    // 해당 레이어가 '마커(Point)'이고 구글 맵에서 지정한 '이름(name
+                // [안전장치 2] KML 파일 내에 하위 폴더 구조가 겹쳐있어도 끝까지 추적해 마커를 찾는 안전 함수
+                function parseLayersRecursively(layer) {
+                    if (typeof layer.eachLayer === 'function') {
+                        // 하위 폴더나 그룹 레이어인 경우 내부를 순회
+                        layer.eachLayer(parseLayersRecursively);
+                    } else if (layer instanceof L.Marker || (typeof layer.getLatLng === 'function' && !layer.getBounds)) {
+                        // 실제 마커 데이터를 찾은 경우 안전하게 이름표 결합
+                        try {
+                            var labelText = '';
+                            if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
+                                labelText = layer.feature.properties.name;
+                            } else if (layer.options && layer.options.title) {
+                                labelText = layer.options.title;
+                            }
+
+                            if (labelText) {
+                                layer.bindTooltip(labelText, {
+                                    permanent: true,
+                                    direction: 'bottom',
+                                    className: 'always-on-label',
+                                    offset: [0, 5]
+                                }).openTooltip();
+                            }
+                        } catch (err) {
+                            console.error("마커 이름표 바인딩 중 경미한 오류 무시됨:", err);
+                        }
+                    }
+                }
+
+                // 마커 검사 및 이름표 생성 프로세스 시작
+                parseLayersRecursively(e.layer);
+            });
+            
+            currentKmzLayer.load(fileName);
+        }
+
+        // 4. 내 위치 찾기 함수
+        function goToMyLocation() {
+            if (userLatLng) {
+                map.setView(userLatLng, 17);
+            } else {
+                alert("위치 정보를 수신 중입니다. 잠시만 기다려 주세요.");
+            }
+        }
+
+        // 5. 실시간 GPS 추적 설정
+        map.locate({ setView: false, watch: true, enableHighAccuracy: true });
+
+        map.on('locationfound', function(e) {
+            userLatLng = e.latlng;
+            if (!gpsMarker) {
+                gpsMarker = L.marker(e.latlng).addTo(map).bindPopup("기사님 현재 위치");
+            } else {
+                gpsMarker.setLatLng(e.latlng);
+            }
+        });
+
+        map.on('locationerror', function() {
+            console.log("GPS 권한 대기 중...");
+        });
+
+        // 초기 구동 시 BPA 경로 자동 설정
+        window.onload = function() {
+            setTimeout(function() {
+                var initialBtn = document.getElementById('btn-bpa');
+                if (initialBtn) {
+                    loadRoute('bpa.kml', initialBtn);
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
